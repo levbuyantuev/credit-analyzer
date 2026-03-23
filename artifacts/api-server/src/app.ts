@@ -1,8 +1,13 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import path from "path";
+import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app: Express = express();
 
@@ -30,5 +35,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+// Раздача статики фронтенда (сборка Vite) — ПОСЛЕ всех API-маршрутов
+const FRONTEND_DIST = path.join(__dirname, "../../credit-analyzer/dist/public");
+app.use(express.static(FRONTEND_DIST));
+
+// Catch-all для React Router (SPA) — должен быть ПОСЛЕДНИМ
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(FRONTEND_DIST, "index.html"));
+});
 
 export default app;

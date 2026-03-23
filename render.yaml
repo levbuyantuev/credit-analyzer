@@ -4,7 +4,7 @@ services:
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: npm install -g pnpm && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/api-server run build
+    buildCommand: npm install -g pnpm && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/credit-analyzer run build && pnpm --filter @workspace/api-server run build
     startCommand: node artifacts/api-server/dist/index.mjs
     envVars:
       - key: NODE_ENV
@@ -22,22 +22,6 @@ services:
         sync: false
       - key: SESSION_SECRET
         generateValue: true
-
-  - type: web
-    name: credit-analyzer-frontend
-    runtime: node
-    region: frankfurt
-    plan: free
-    buildCommand: npm install -g pnpm && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/credit-analyzer run build
-    startCommand: npx serve artifacts/credit-analyzer/dist/public -l $PORT
-    envVars:
-      - key: PORT
-        fromService:
-          type: web
-          name: credit-analyzer-frontend
-          property: port
-      - key: BASE_PATH
-        value: /
 
 databases:
   - name: credit-analyzer-db
