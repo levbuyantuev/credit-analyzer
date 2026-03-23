@@ -41,7 +41,10 @@ const FRONTEND_DIST = path.join(__dirname, "../../credit-analyzer/dist/public");
 app.use(express.static(FRONTEND_DIST));
 
 // Catch-all для React Router (SPA) — должен быть ПОСЛЕДНИМ
-app.get("*", (_req, res) => {
+app.get("{*splat}", (req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    return next();
+  }
   res.sendFile(path.join(FRONTEND_DIST, "index.html"));
 });
 
