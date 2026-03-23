@@ -41,6 +41,7 @@ export function useCreditAnalyzer() {
   // Polling session status
   const { data: sessionStatus } = useGetSession(sessionId || '', {
     query: {
+      queryKey: ['/api/sessions/:sessionId/status', { sessionId }],
       enabled: !!sessionId && (step === 'processing' || step === 'uploading'),
       refetchInterval: (query) => {
         // Stop polling if completed or failed
