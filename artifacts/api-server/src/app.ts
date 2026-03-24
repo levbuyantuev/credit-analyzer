@@ -3,6 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import path from "path";
 import { fileURLToPath } from "url";
+import { createProxyMiddleware } from "http-proxy-middleware";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -35,6 +36,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+// Проксируем /multiagent/* → Python FastAPI сервис на порту 8000
+app.use(
+  "/multiagent",
+  createProxyMiddleware({
+    target: "http://localhost:8000",
+    changeOrigin: true,
+    on: {
+      error: (err, req, res: any) => {
+        logger.error({ err }, "Proxy error to multiagent service");
+        res.status(502).json({ error: "Multiagent service unavailable" });
+      },
+    },
+  }),
+);
 
 // Раздача статики фронтенда (сборка Vite) — ПОСЛЕ всех API-маршрутов
 const FRONTEND_DIST = path.join(__dirname, "../../credit-analyzer/dist/public");
