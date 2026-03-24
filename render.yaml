@@ -23,6 +23,22 @@ services:
       - key: SESSION_SECRET
         generateValue: true
 
+  - type: web
+    name: multiagent-consulting
+    runtime: python
+    region: frankfurt
+    plan: free
+    buildCommand: pip install -r artifacts/multiagent/requirements.txt
+    startCommand: cd artifacts/multiagent && python main.py
+    envVars:
+      - key: PORT
+        fromService:
+          type: web
+          name: multiagent-consulting
+          property: port
+      - key: OPENROUTER_API_KEY
+        sync: false
+
 databases:
   - name: credit-analyzer-db
     region: frankfurt

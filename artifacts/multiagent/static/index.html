@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Multi-Agent Consulting</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d0d1a;
+  --sidebar: #111122;
+  --card: #161628;
+  --border: #252540;
+  --text: #e0e0f0;
+  --muted: #7070a0;
+  --accent: #7c3aed;
+  --accent2: #3b82f6;
+  --cyan: #06b6d4;
+  --green: #10b981;
+  --amber: #f59e0b;
+  --red: #ef4444;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  width: 260px;
+  min-width: 260px;
+  background: var(--sidebar);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-header {
+  padding: 1.25rem 1rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-header h2 {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.new-chat-btn {
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.new-chat-btn:hover { opacity: 0.9; }
+.history-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem 0.5rem;
+}
+.history-item {
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 0.25rem;
+  transition: background 0.15s;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.history-item:hover { background: rgba(255,255,255,0.05); }
+.history-item.active { background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3); }
+.history-icon { font-size: 0.85rem; margin-top: 0.05rem; flex-shrink: 0; }
+.history-text {
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.history-item.active .history-text { color: #a78bfa; }
+.history-empty {
+  padding: 1rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+.sidebar-footer {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ─── MAIN ─── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.main-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.main-title {
+  font-size: 1rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #a78bfa, #60a5fa, #67e8f9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.main-subtitle { font-size: 0.75rem; color: var(--muted); margin-top: 0.1rem; }
+.mode-toggle {
+  display: flex;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+.mode-btn {
+  padding: 0.35rem 0.75rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mode-btn.active {
+  background: var(--accent);
+  color: white;
+}
+
+/* ─── CONVERSATION ─── */
+.conversation {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  gap: 1rem;
+}
+.welcome-logo {
+  font-size: 3rem;
+  animation: float 3s ease-in-out infinite;
+}
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.welcome h3 { font-size: 1.3rem; font-weight: 700; color: var(--text); }
+.welcome p { font-size: 0.9rem; color: var(--muted); max-width: 380px; line-height: 1.6; }
+.welcome-agents {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+.agent-chip {
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.chip-thinker { background: rgba(124,58,237,0.15); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
+.chip-psychologist { background: rgba(6,182,212,0.15); color: #67e8f9; border: 1px solid rgba(6,182,212,0.3); }
+.chip-practitioner { background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+.chip-critic { background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+
+/* ─── MESSAGES ─── */
+.user-msg {
+  align-self: flex-end;
+  max-width: 70%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 16px 16px 4px 16px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  word-break: break-word;
+}
+.ai-response {
+  align-self: flex-start;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* ─── AGENT CARDS ─── */
+.agent-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.agent-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  animation: slideIn 0.3s ease;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.agent-card-header {
+  padding: 0.6rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  user-select: none;
+}
+.agent-card-header:hover { background: rgba(255,255,255,0.03); }
+.agent-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.agent-dot.thinking {
+  animation: pulseDot 1s ease-in-out infinite;
+}
+@keyframes pulseDot {
+  0%,100% { opacity: 0.4; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+.thinker .agent-dot { background: #a78bfa; }
+.psychologist .agent-dot { background: #67e8f9; }
+.practitioner .agent-dot { background: #93c5fd; }
+.critic .agent-dot { background: #fcd34d; }
+.agent-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.thinker .agent-name { color: #a78bfa; }
+.psychologist .agent-name { color: #67e8f9; }
+.practitioner .agent-name { color: #93c5fd; }
+.critic .agent-name { color: #fcd34d; }
+.agent-status {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.agent-chevron { margin-left: 0.25rem; color: var(--muted); font-size: 0.7rem; transition: transform 0.2s; }
+.agent-card.expanded .agent-chevron { transform: rotate(180deg); }
+.agent-body {
+  display: none;
+  padding: 0 1rem 0.75rem;
+  border-top: 1px solid var(--border);
+}
+.agent-card.expanded .agent-body { display: block; }
+.agent-content {
+  font-size: 0.83rem;
+  line-height: 1.7;
+  color: #b0b0d0;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-top: 0.75rem;
+}
+.agent-content h1,.agent-content h2,.agent-content h3 { color: var(--text); margin: 0.75rem 0 0.3rem; font-size: 0.9rem; }
+.agent-content p { margin-bottom: 0.5rem; }
+.agent-content ul,.agent-content ol { padding-left: 1.25rem; margin-bottom: 0.5rem; }
+.agent-content li { margin-bottom: 0.2rem; }
+.agent-content strong { color: var(--text); }
+.agent-content code { background: rgba(255,255,255,0.07); padding: 0.1rem 0.3rem; border-radius: 4px; font-size: 0.78rem; }
+
+/* ─── FINAL ANSWER ─── */
+.final-answer {
+  background: var(--card);
+  border: 1px solid rgba(124,58,237,0.4);
+  border-radius: 12px;
+  padding: 1.25rem;
+  animation: slideIn 0.4s ease;
+}
+.final-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #a78bfa;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.final-content {
+  font-size: 0.9rem;
+  line-height: 1.75;
+  color: var(--text);
+}
+.final-content h1,.final-content h2,.final-content h3 { color: white; margin: 0.75rem 0 0.35rem; }
+.final-content h2 { font-size: 1rem; }
+.final-content h3 { font-size: 0.92rem; }
+.final-content p { margin-bottom: 0.6rem; }
+.final-content ul,.final-content ol { padding-left: 1.5rem; margin-bottom: 0.6rem; }
+.final-content li { margin-bottom: 0.25rem; }
+.final-content strong { color: white; }
+.final-content code { background: rgba(255,255,255,0.08); padding: 0.15rem 0.35rem; border-radius: 4px; font-size: 0.82rem; }
+.final-content blockquote { border-left: 3px solid var(--accent); padding-left: 0.75rem; color: #9090c0; margin: 0.5rem 0; }
+
+/* ─── SYNTHESIZING ─── */
+.synthesizing-bar {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  animation: slideIn 0.3s ease;
+}
+.synth-dots span {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulseDot 1.2s ease infinite;
+  margin-right: 3px;
+}
+.synth-dots span:nth-child(2) { animation-delay: 0.2s; background: var(--accent2); }
+.synth-dots span:nth-child(3) { animation-delay: 0.4s; background: var(--cyan); }
+
+/* ─── ERROR ─── */
+.error-msg {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.35);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  color: #fca5a5;
+}
+
+/* ─── INPUT AREA ─── */
+.input-area {
+  border-top: 1px solid var(--border);
+  padding: 1rem 1.5rem;
+  flex-shrink: 0;
+  background: var(--sidebar);
+}
+.input-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  transition: border-color 0.2s;
+}
+.input-box:focus-within { border-color: var(--accent); }
+textarea#query {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  resize: none;
+  max-height: 140px;
+  min-height: 24px;
+  font-family: inherit;
+}
+textarea#query::placeholder { color: var(--muted); }
+.send-btn {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.send-btn:hover { opacity: 0.9; }
+.send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.input-hint {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 640px) {
+  .sidebar { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h2>История чатов</h2>
+    <button class="new-chat-btn" onclick="newChat()">
+      <span>+</span> Новый чат
+    </button>
+  </div>
+  <div class="history-list" id="historyList"></div>
+  <div class="sidebar-footer">nvidia/nemotron · 4 агента · free</div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="main-header">
+    <div>
+      <div class="main-title">Multi-Agent Consulting</div>
+      <div class="main-subtitle">Мыслитель · Психолог · Практик · Критик</div>
+    </div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btn-engine" onclick="setMode('engine')">⚡ Engine</button>
+      <button class="mode-btn" id="btn-crew" onclick="setMode('crew')">🤖 CrewAI</button>
+    </div>
+  </div>
+
+  <div class="conversation" id="conversation">
+    <div class="welcome" id="welcome">
+      <div class="welcome-logo">🧠</div>
+      <h3>Мультиагентная консалтинговая система</h3>
+      <p>Опишите вашу задачу или вопрос. Четыре специализированных AI-агента проанализируют её с разных сторон и дадут интегрированный ответ.</p>
+      <div class="welcome-agents">
+        <span class="agent-chip chip-thinker">🧠 Мыслитель</span>
+        <span class="agent-chip chip-psychologist">💡 Психолог</span>
+        <span class="agent-chip chip-practitioner">⚙️ Практик</span>
+        <span class="agent-chip chip-critic">🔍 Критик</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-box">
+      <textarea id="query" rows="1" placeholder="Опишите вашу задачу или вопрос..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="submitQuery()" title="Отправить (Enter)">➤</button>
+    </div>
+    <div class="input-hint">Enter — отправить · Shift+Enter — новая строка · Engine режим: real-time прогресс</div>
+  </div>
+</main>
+
+<script>
+const AGENT_META = {
+  Thinker:      { label: 'Мыслитель',  icon: '🧠', cls: 'thinker' },
+  Psychologist: { label: 'Психолог',   icon: '💡', cls: 'psychologist' },
+  Practitioner: { label: 'Практик',    icon: '⚙️', cls: 'practitioner' },
+  Critic:       { label: 'Критик',     icon: '🔍', cls: 'critic' },
+};
+
+let currentMode = 'engine';
+let history = JSON.parse(localStorage.getItem('ma_history') || '[]');
+let currentId = null;
+
+function setMode(m) {
+  currentMode = m;
+  document.getElementById('btn-engine').classList.toggle('active', m === 'engine');
+  document.getElementById('btn-crew').classList.toggle('active', m === 'crew');
+}
+
+function getBase() {
+  return (document.querySelector('base')?.href || window.location.origin + '/multiagent').replace(/\/$/, '');
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitQuery(); }
+}
+
+// ─── HISTORY ───
+function saveHistory() {
+  localStorage.setItem('ma_history', JSON.stringify(history.slice(0, 30)));
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (!history.length) {
+    list.innerHTML = '<div class="history-empty">Чатов пока нет</div>';
+    return;
+  }
+  list.innerHTML = history.map(h => `
+    <div class="history-item ${h.id === currentId ? 'active' : ''}" onclick="loadChat('${h.id}')">
+      <span class="history-icon">💬</span>
+      <span class="history-text">${escHtml(h.query)}</span>
+    </div>
+  `).join('');
+}
+
+function loadChat(id) {
+  const item = history.find(h => h.id === id);
+  if (!item) return;
+  currentId = id;
+  renderHistory();
+  const conv = document.getElementById('conversation');
+  conv.innerHTML = '';
+  appendUserMsg(item.query);
+  const aiDiv = document.createElement('div');
+  aiDiv.className = 'ai-response';
+  if (item.agents) {
+    for (const [name, content] of Object.entries(item.agents)) {
+      if (content) aiDiv.appendChild(makeAgentCard(name, content, false));
+    }
+  }
+  if (item.answer) aiDiv.appendChild(makeFinalCard(item.answer));
+  conv.appendChild(aiDiv);
+  scrollBottom();
+}
+
+function newChat() {
+  currentId = null;
+  renderHistory();
+  const conv = document.getElementById('conversation');
+  conv.innerHTML = `
+    <div class="welcome" id="welcome">
+      <div class="welcome-logo">🧠</div>
+      <h3>Мультиагентная консалтинговая система</h3>
+      <p>Опишите вашу задачу или вопрос. Четыре специализированных AI-агента проанализируют её с разных сторон и дадут интегрированный ответ.</p>
+      <div class="welcome-agents">
+        <span class="agent-chip chip-thinker">🧠 Мыслитель</span>
+        <span class="agent-chip chip-psychologist">💡 Психолог</span>
+        <span class="agent-chip chip-practitioner">⚙️ Практик</span>
+        <span class="agent-chip chip-critic">🔍 Критик</span>
+      </div>
+    </div>`;
+}
+
+// ─── DOM HELPERS ───
+function appendUserMsg(text) {
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.remove();
+  const div = document.createElement('div');
+  div.className = 'user-msg';
+  div.textContent = text;
+  document.getElementById('conversation').appendChild(div);
+  scrollBottom();
+}
+
+function makeAgentCard(name, content, expanded = false) {
+  const m = AGENT_META[name] || { label: name, icon: '🤖', cls: '' };
+  const card = document.createElement('div');
+  card.className = `agent-card ${m.cls} ${expanded ? 'expanded' : ''}`;
+  card.id = `card-${name}`;
+  card.innerHTML = `
+    <div class="agent-card-header" onclick="toggleCard(this.parentElement)">
+      <span class="agent-dot"></span>
+      <span class="agent-name">${m.icon} ${m.label}</span>
+      <span class="agent-status">готово</span>
+      <span class="agent-chevron">▾</span>
+    </div>
+    <div class="agent-body">
+      <div class="agent-content">${marked.parse(content || '')}</div>
+    </div>`;
+  return card;
+}
+
+function makeFinalCard(answer) {
+  const div = document.createElement('div');
+  div.className = 'final-answer';
+  div.innerHTML = `
+    <div class="final-label">✦ Интегрированный ответ</div>
+    <div class="final-content">${marked.parse(answer || '')}</div>`;
+  return div;
+}
+
+function toggleCard(card) {
+  card.classList.toggle('expanded');
+}
+
+function scrollBottom() {
+  const c = document.getElementById('conversation');
+  c.scrollTop = c.scrollHeight;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── SUBMIT ───
+async function submitQuery() {
+  const textarea = document.getElementById('query');
+  const query = textarea.value.trim();
+  if (!query) return;
+
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+  textarea.value = '';
+  textarea.style.height = 'auto';
+
+  appendUserMsg(query);
+
+  const aiDiv = document.createElement('div');
+  aiDiv.className = 'ai-response';
+  document.getElementById('conversation').appendChild(aiDiv);
+  scrollBottom();
+
+  const histItem = { id: Date.now().toString(), query, agents: {}, answer: '', mode: currentMode };
+  currentId = histItem.id;
+  history.unshift(histItem);
+  saveHistory();
+  renderHistory();
+
+  try {
+    if (currentMode === 'engine') {
+      await runStream(query, aiDiv, histItem);
+    } else {
+      await runSync(query, aiDiv, histItem);
+    }
+  } catch (err) {
+    const e = document.createElement('div');
+    e.className = 'error-msg';
+    e.textContent = 'Ошибка: ' + err.message;
+    aiDiv.appendChild(e);
+  } finally {
+    btn.disabled = false;
+    saveHistory();
+    renderHistory();
+  }
+}
+
+// ─── ENGINE MODE (streaming) ───
+async function runStream(query, aiDiv, histItem) {
+  const base = getBase();
+  const agentCards = {};
+
+  // Placeholder cards for all agents (thinking state)
+  const allAgents = ['Thinker', 'Psychologist', 'Practitioner', 'Critic'];
+  const progressDiv = document.createElement('div');
+  progressDiv.className = 'agent-progress';
+  aiDiv.appendChild(progressDiv);
+
+  const resp = await fetch(base + '/chat/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: 'web-user', query, mode: 'engine' }),
+  });
+
+  if (!resp.ok) {
+    throw new Error(`HTTP ${resp.status}`);
+  }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let synthBar = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      let evt;
+      try { evt = JSON.parse(line.slice(6)); } catch { continue; }
+
+      if (evt.type === 'tier_start') {
+        // Show thinking cards for agents in this tier
+        for (const agentName of evt.agents) {
+          if (!agentCards[agentName]) {
+            const m = AGENT_META[agentName] || { label: agentName, icon: '🤖', cls: '' };
+            const card = document.createElement('div');
+            card.className = `agent-card ${m.cls}`;
+            card.id = `card-${agentName}`;
+            card.innerHTML = `
+              <div class="agent-card-header">
+                <span class="agent-dot thinking"></span>
+                <span class="agent-name">${m.icon} ${m.label}</span>
+                <span class="agent-status">думает...</span>
+              </div>`;
+            agentCards[agentName] = card;
+            progressDiv.appendChild(card);
+            scrollBottom();
+          }
+        }
+      }
+
+      if (evt.type === 'agent_done') {
+        const name = evt.agent;
+        histItem.agents[name] = evt.content;
+        const existingCard = agentCards[name];
+        if (existingCard) {
+          existingCard.replaceWith(makeAgentCard(name, evt.content, false));
+          agentCards[name] = document.getElementById(`card-${name}`);
+        } else {
+          progressDiv.appendChild(makeAgentCard(name, evt.content, false));
+        }
+        scrollBottom();
+      }
+
+      if (evt.type === 'synthesizing') {
+        synthBar = document.createElement('div');
+        synthBar.className = 'synthesizing-bar';
+        synthBar.innerHTML = `<div class="synth-dots"><span></span><span></span><span></span></div><span>Синтез финального ответа...</span>`;
+        aiDiv.appendChild(synthBar);
+        scrollBottom();
+      }
+
+      if (evt.type === 'final') {
+        if (synthBar) { synthBar.remove(); synthBar = null; }
+        histItem.answer = evt.answer;
+        aiDiv.appendChild(makeFinalCard(evt.answer));
+        scrollBottom();
+      }
+
+      if (evt.type === 'error') {
+        throw new Error(evt.message);
+      }
+    }
+  }
+}
+
+// ─── CREWAI MODE (sync) ───
+async function runSync(query, aiDiv, histItem) {
+  const base = getBase();
+
+  const synthBar = document.createElement('div');
+  synthBar.className = 'synthesizing-bar';
+  synthBar.innerHTML = `<div class="synth-dots"><span></span><span></span><span></span></div><span>CrewAI агенты работают (~60 сек)...</span>`;
+  aiDiv.appendChild(synthBar);
+  scrollBottom();
+
+  const resp = await fetch(base + '/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: 'web-user', query, mode: 'crew' }),
+  });
+
+  synthBar.remove();
+  if (!resp.ok) { const d = await resp.json().catch(() => ({})); throw new Error(d.error || `HTTP ${resp.status}`); }
+  const data = await resp.json();
+
+  const progDiv = document.createElement('div');
+  progDiv.className = 'agent-progress';
+  const details = data.details || {};
+  const keyMap = { analysis: 'Thinker', psychology: 'Psychologist', plan: 'Practitioner', critique: 'Critic' };
+  for (const [key, agentName] of Object.entries(keyMap)) {
+    if (details[key]) {
+      histItem.agents[agentName] = details[key];
+      progDiv.appendChild(makeAgentCard(agentName, details[key], false));
+    }
+  }
+  aiDiv.appendChild(progDiv);
+
+  histItem.answer = data.answer;
+  aiDiv.appendChild(makeFinalCard(data.answer));
+  scrollBottom();
+}
+
+// ─── INIT ───
+renderHistory();
+marked.setOptions({ breaks: true });
+</script>
+</body>
+</html>
